@@ -11,7 +11,7 @@ import sys
 import getopt
 import tempfile
 
-version = '1.0'
+version = '1.1'
 
 
 def exit_gracefully(signum, frame):
@@ -77,8 +77,8 @@ def main():
 
 	### Text parameters ###
 	text_size = int(height * vert_margin / 1.7)
-	scale_text_size = int(right_margin * width / 5)
 	text_font = ImageFont.truetype('/home/m/ACO/Plotter/fonts/Roboto/Roboto-Regular.ttf', size=text_size)
+	scale_text_size = int(right_margin * width / 5)
 	scale_font = ImageFont.truetype('/home/m/ACO/Plotter/fonts/Roboto/Roboto-Regular.ttf', size=scale_text_size)
 	top_text_position = (0.25 * text_size, 0.10 * text_size)
 	bottom_text_position = (0.25 * text_size, height - 1.20 * text_size)
@@ -177,26 +177,27 @@ def main():
 	# Check if 'convert' and 'ffmpeg' are installed, which may be used for post-processing.
 	# Note: find_executable may return a non-executable if it's listed on the PATH.
 	###
+	if find_executable('convert') is not None:
+		print('ImageMagick\'s convert was found;'
+			+ ' will optimize the resulting GIFs.')
+		flag_convert_exec = True
+	else:
+		flag_convert_exec = False
+
 	if find_executable('ffmpeg') is not None:
 		print('ffmpeg was found;'
-			+ ' will optimize the resulting GIFs and create MP4s.')
+			+ ' will create MP4s.')
 		flag_ffmpeg_exec = True
 	else:
 		print('ffmpeg was _NOT_ found;'
 			+ ' will _NOT_ create MP4s.')
 		flag_ffmpeg_exec = False
 	
-	if not flag_ffmpeg_exec and find_executable('convert') is not None:
-		print('ImageMagick\'s convert was found;'
-			+ ' will optimize the resulting GIFs.')
-		flag_convert_exec = True
-	elif not flag_ffmpeg_exec:
-		print('ImageMagick\'s convert was _NOT_ found;'
-			+ ' will _NOT_ optimize the resulting GIFs.')
-		flag_convert_exec = False
+	if flag_ffmpeg_exec and not flag_convert_exec:
+		print('ffmpeg will be used to create moderately-optimized GIFs.')
 
 	if not flag_ffmpeg_exec and not flag_convert_exec:
-		print('\nWARNING: Unable to optimize GIFs. Please install ffmpeg or imagemagick.')
+		print('\nWARNING: Unable to optimize GIFs. Please install imagemagick or ffmpeg.')
 	if not flag_ffmpeg_exec:
 		print('\nWARNING: Unable to create MP4s. Please install ffmpeg.')
 
@@ -377,7 +378,11 @@ def main():
 			if flag_show_bars:
 				for i in range(dimensions):
 					x_point = bar_locations[i]
-					draw.line((x_point, height * vert_margin, x_point, height * (1. - vert_margin)), fill=bar_colour, width=bar_width)
+					draw.line(
+						(x_point, height * vert_margin,
+						x_point, height * (1. - vert_margin)),
+						fill=bar_colour,
+						width=bar_width)
 
 			###
 			# Draw a scale next to the right-most vertical bar.
@@ -421,10 +426,10 @@ def main():
 
 		# Creation of the run's GIF file
 		print('Creating {0}'.format(gif_output_dir + output_filename + '.gif'))
-		if flag_ffmpeg_exec:
-			ffmpeg_gif(images, frame_delay, gif_output_dir, output_filename)
-		elif flag_convert_exec:
+		if flag_convert_exec:
 			IM_convert_gif(images, frame_delay, gif_output_dir, output_filename)
+		elif flag_ffmpeg_exec:
+			ffmpeg_gif(images, frame_delay, gif_output_dir, output_filename)
 		else:
 			pil_gif(images, frame_delay, gif_output_dir, output_filename)
 
@@ -440,14 +445,16 @@ def pil_gif(images, frame_delay, output_directory, output_filename):
 		output_directory + output_filename + '.gif',
 		save_all=True,
 		append_images=images[1:],
-		duration=frame_delay,
+		duration=max(1.5, frame_delay),
 		loop=0)
 
 
 def IM_convert_gif(images, frame_delay, output_directory, output_filename):
 	"""
 	Uses ImageMagick's convert to create and save an optimized GIF.
-	convert creates slightly smaller files, although they run sluggishly.
+	convert creates slightly smaller files than ffmpeg.
+	Optimization flags may produce smaller files still,
+	but the additional cost usually outweighs any benefits.
 	"""
 	gif_tempfile = tempfile.NamedTemporaryFile()
 	images[0].save(gif_tempfile,
@@ -457,13 +464,16 @@ def IM_convert_gif(images, frame_delay, output_directory, output_filename):
 		loop=0)
 	gif_tempfile.seek(0)
 
+	# If frame_delay is <= 1.5, the GIFs may play much slower than expected.
+	frame_delay = max(1.5, frame_delay)
+
 	convert_cmd = [
 		'convert',
-		'-',
 		'-delay', str(frame_delay),
 		'-loop', '0',
-		'-coalesce',
-		'-layers', 'OptimizeFrame',
+		'-',
+		# '-coalesce',
+		# '-layers', 'Optimize',
 		output_directory + output_filename + '.gif'
 	]
 
@@ -471,7 +481,7 @@ def IM_convert_gif(images, frame_delay, output_directory, output_filename):
 
 
 def ffmpeg_gif(images, frame_delay, output_directory, output_filename):
-	""" Uses ffmpeg to create and save an optimized GIF. """
+	""" Uses ffmpeg to create and save an moderately-optimized GIF. """
 	ffmpeg_cmd = [
 		'ffmpeg',
 		'-loglevel', 'quiet',
@@ -511,7 +521,7 @@ def ffmpeg_mp4_h264(images, frame_delay, output_directory, output_filename):
 		'-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
 		'-vcodec', 'libx264',
 		# '-vcodec', 'libx264rgb',
-		'-crf', '24',		# Constant quality [0-51], lower numbers -> higher quality
+		'-crf', '25',		# Constant quality [0-51], lower numbers -> higher quality
 		'-maxrate', '10M',	# Target max bitrate/second
 		'-bufsize', '5M',	# How often ffmpeg checks the actual bitrate against the target
 		'-pix_fmt', 'yuv444p',
