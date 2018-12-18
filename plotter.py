@@ -104,15 +104,23 @@ def main():
 
 			elif opt in ('-d', '--duration'):
 				try:
-					total_duration = float(arg)
-					print('Media duration set to {0} seconds.'.format(total_duration))
+					arg = float(arg)
+					if arg > 0:
+						total_duration = float(arg)
+						print('Media duration set to {0} seconds.'.format(total_duration))
+					else:
+						print('Provided duration is not valid. Setting to default of {0}'.format(total_duration))
 				except ValueError:
-					print('Provided duration is not valid. Setting to default of {0}'.format())
+					print('Provided duration is not valid. Setting to default of {0}'.format(total_duration))
 			
 			elif opt in ('-s', '--stepping'):
 				try:
-					file_stepping = int(arg)
-					print('File stepping set to {0}.'.format(file_stepping))
+					arg = int(arg)
+					if arg >= 1:
+						file_stepping = int(arg)
+						print('File stepping set to {0}.'.format(file_stepping))
+					else:
+						print('Provided stepping value is not valid. Setting to default of {0}.'.format(file_stepping))
 				except ValueError:
 					print('Provided stepping value is not valid. Setting to default of {0}.'.format(file_stepping))
 

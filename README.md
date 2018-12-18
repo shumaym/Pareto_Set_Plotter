@@ -35,12 +35,16 @@ Examples
 	<img src="docs/DTLZ4_m3_ASF_PyTorch.gif"/>
     <figcaption>PyTorch &ndash; ASF: DTLZ4 in 3 dimensions</figcaption>
 </figure>
+
 <br>
+
 <figure>
 	<img src="docs/DTLZ4_m3_VADS_PyTorch.gif"/>
     <figcaption>PyTorch &ndash; VADS: DTLZ4 in 3 dimensions</figcaption>
 </figure>
+
 <br>
+
 <figure>
 	<img src="docs/DTLZ7_m7_ASF_PyTorch.gif"/>
     <figcaption>PyTorch &ndash; ASF: DTLZ7 in 7 dimensions</figcaption>
